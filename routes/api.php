@@ -2,9 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\ProductController;
-use App\Models\Product;
 use Illuminate\Support\Facades\Route;
-use Yajra\DataTables\Facades\DataTables;
 
 
 
@@ -19,7 +17,5 @@ Route::middleware('auth:api')->group(function () {
 });
 
 // Sanctum: session-authenticated data for the DataTables page
-Route::middleware('auth:sanctum')->get('products-table', function () {
-    return DataTables::of(Product::query())->make(true);
-});
+Route::middleware('auth:sanctum')->get('products-table', [ProductController::class, 'datatable']);
 

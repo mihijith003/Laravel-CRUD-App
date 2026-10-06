@@ -15,6 +15,16 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    @can('view-products')
+                    <x-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
+                        {{ __('Products') }}
+                    </x-nav-link>
+                    @endcan
+                    @can('view-activity-log')
+                    <x-nav-link :href="route('activity-log.index')" :active="request()->routeIs('activity-log.*')">
+                        {{ __('Activity Log') }}
+                    </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -70,6 +80,16 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+            @can('view-products')
+            <x-responsive-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
+                {{ __('Products') }}
+            </x-responsive-nav-link>
+            @endcan
+            @can('view-activity-log')
+            <x-responsive-nav-link :href="route('activity-log.index')" :active="request()->routeIs('activity-log.*')">
+                {{ __('Activity Log') }}
+            </x-responsive-nav-link>
+            @endcan
         </div>
 
         <!-- Responsive Settings Options -->

@@ -9,32 +9,54 @@ use Yajra\DataTables\DataTables;
 
 class ProductController extends Controller
 {
+
+
+    public function __construct()
+    {
+        $this->middleware('premission:view-products')->only(['index','show']);
+        $this->middleware('permission:create-products')->only(['create','store']);
+        $this->middleware('permission:edit-products')->only(['edit','update']);
+        $this->middleware('permission:delete-products')->only(['destroy','trash']);
+    }
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index()
     {
-        if ($request->ajax()){
-            $data = Product::latest()->get();
-            return Datatables::of($data)
-            ->addIndexToColumn()
-            ->addToColumn('action',function($row){
-                $editUrl =route('products.edit',$row->id);
-                $deleteUrl = route('products.destroy',$row->id);
-                return '<a href="'.$editUrl.'" class="btn btn-primary btn-sm">Edit</a>
-                        <form action="'.$deleteUrl.'" method="POST" style="display:inline;">
-                            '.csrf_field().'
-                            '.method_field("DELETE").'
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                        </form>';
-            })
-            ->rawColumns(['action'])
-            ->make(true);
-        }
-
-        return view('products.index');
-        //return Product::latest()->get();
+        return Product::latest()->get();
     }
+
+    /**
+     * Server-side DataTables source for the products page.
+     */
+public function datatable()
+{
+    return DataTables::of(Product::query())
+        ->addIndexColumn()
+        ->addColumn('actions', function (Product $row) {
+            $html = '';
+
+            if (auth()->user()->can('edit-products')) {
+                $editUrl = route('products.edit', $row->id);
+
+                $html .= '<a href="'.$editUrl.'" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded">Edit</a> ';
+            }
+
+            if (auth()->user()->can('delete-products')) {
+                $deleteUrl = route('products.destroy', $row->id);
+
+                $html .= '<form action="'.$deleteUrl.'" method="POST" style="display:inline;" onsubmit="return confirm(\'Delete this product?\');">
+                    '.csrf_field().'
+                    '.method_field('DELETE').'
+                    <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded">Delete</button>
+                </form>';
+            }
+
+            return $html;
+        })
+        ->rawColumns(['actions'])
+        ->make(true);
+}
 
     public function create()
     {
@@ -46,16 +68,17 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        return Product::create($request->validate([
+        $product = Product::create($request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-        ]));    
+        ]));
 
-        Product::create($validated);
+        if ($request->expectsJson()) {
+            return response()->json($product, 201);
+        }
 
-       // return response()->json($product, 201);
-       // Redirect back to the table with a success message
+        // Redirect back to the table with a success message
         return redirect()->route('products.index')->with('success', 'Product created successfully.');
     }
 
@@ -82,24 +105,46 @@ class ProductController extends Controller
     {
         $product -> update($request->validate([
             'name' => 'sometimes|string|max:255',
-            'decrription' => 'nullable|string',
+            'description' => 'nullable|string',
             'price' => 'sometimes|numeric|min:0',
         ]));
 
-        $product->update($validated);
+        if ($request->expectsJson()) {
+            return $product;
+        }
 
         return redirect()->route('products.index')->with('success','Product updated successfully.');
-
-        //return $product;
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Product $product) 
+    public function destroy($id)
     {
-        $product->delete();
-        return redirect()->route('products.index')->with('success','Product deleted successfully.');
+        // Bypass the scope: trashed products must still resolve so they can be purged
+        $product = Product::withoutGlobalScope('notTrashed')->findOrFail($id);
 
+        if ($product->status === Product::STATUS_TRASHED) {
+            $product->delete();
+            return redirect()->route('products.trash')->with('success','Product permanently deleted.');
+        }
+
+        $product->status = Product::STATUS_TRASHED;
+        $product->save();
+
+        return redirect()->route('products.index')->with('success','Product moved to trash.');
+    }
+
+    /**
+     * List trashed products.
+     */
+    public function trash()
+    {
+        $products = Product::withoutGlobalScope('notTrashed')
+            ->where('status', Product::STATUS_TRASHED)
+            ->latest()
+            ->get();
+
+        return view('products.trash', compact('products'));
     }
 }

@@ -42,5 +42,23 @@ class DatabaseSeeder extends Seeder
             'description' => 'Description for Product 3',
             'price' => 5.49,
         ]);
+
+        Product::create([
+            'name' => 'Lenovo ThinkPad X1 Carbon',
+            'description' => 'A high-end business laptop with a sleek design and powerful performance.',
+            'price' => 1499.99,
+        ]);
+
+        Product::create([
+            'name' => 'Apple MacBook Pro 16-inch',
+            'description' => 'A premium laptop with a stunning Retina display and exceptional performance for creative professionals.',
+            'price' => 2399.99,
+        ]);
+
+        Product::create([
+            'name' => 'Dell XPS 13',
+            'description' => 'A compact and stylish ultrabook with a nearly borderless display and long battery life.',
+            'price' => 1299.99,
+        ]);
     }
 }
